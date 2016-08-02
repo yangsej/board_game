@@ -143,21 +143,20 @@ class Board:
     def _select(self, event):
         if event.keysym == 'z':
             if self.sel_Lb.config('state')[-1] == DISABLED:
-                self.board_canvas.itemconfig(self.sel_rect, state=NORMAL)
-                self.board_canvas.coords(self.sel_rect, self.board_canvas.coords(self.pos_rect))
-                self.board_canvas.lift(self.sel_rect)
-                self.board_canvas.config(state=DISABLED)
-
-                
-                self.sel_Lb.config(state=NORMAL)
-                self.sel_Lb.insert(END,'이동')
-                self.sel_Lb.insert(END,'공격')
-                self.sel_Lb.insert(END,'기술')
-                self.sel_Lb.insert(END,'취소')
-                self.sel_Lb.focus()
-                self.sel_Lb.select_set(0)
-                self.sel_Lb.activate(0)
-##                print(dir(self.sel_Lb))
+                if 
+                    self.board_canvas.itemconfig(self.sel_rect, state=NORMAL)
+                    self.board_canvas.coords(self.sel_rect, self.board_canvas.coords(self.pos_rect))
+                    self.board_canvas.lift(self.sel_rect)
+                    self.board_canvas.config(state=DISABLED)
+                    
+                    self.sel_Lb.config(state=NORMAL)
+                    self.sel_Lb.insert(END,'이동')
+                    self.sel_Lb.insert(END,'공격')
+                    self.sel_Lb.insert(END,'기술')
+                    self.sel_Lb.insert(END,'취소')
+                    self.sel_Lb.focus()
+                    self.sel_Lb.select_set(0)
+                    self.sel_Lb.activate(0)
             else:
                 sel = self.sel_Lb.selection_get()
                 
