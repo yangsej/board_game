@@ -13,10 +13,10 @@ class Board:
         self.cols = cols
 
         #기본 설정
-        self.row_pos = 8
-        self.col_pos = 8
+        self.row_pos = 4
+        self.col_pos = 4
 
-        self.rect_size = 50
+        self.rect_size = 100
         
 
         #보드와 유저들 프레임
@@ -32,7 +32,7 @@ class Board:
 
 
         #보드 캔버스
-        self.board_canvas = Canvas(board_frame, height=850,width=850, bg='black', confine=False,
+        self.board_canvas = Canvas(board_frame, height=900,width=900, bg='black', confine=False,
                                    xscrollincrement=self.rect_size, yscrollincrement=self.rect_size)
         self.board_canvas.grid(row=0, column=0)#, sticky='nsew')
 
@@ -42,10 +42,12 @@ class Board:
         for r in range(rows):
             self.canvas.append([])
             for c in range(cols):
-##                self.canvas[h].append(Button(board_canvas, height=3, width=6, bg='white', bd=1, relief=GROOVE, state=DISABLED))
-##                board_canvas.create_window(w*50, h*50, anchor=NW, window=self.canvas[h][w])
-                self.canvas[r].append(self.board_canvas.create_rectangle
-                                      ((c*self.rect_size, r*self.rect_size), ((c+1)*self.rect_size, (r+1)*self.rect_size), fill='white', ))
+                self.canvas[r].append(
+                    {
+                        'ID' : self.board_canvas.create_rectangle((c*self.rect_size, r*self.rect_size),
+                                                                  ((c+1)*self.rect_size, (r+1)*self.rect_size),
+                                                                  fill='white', ),
+                    })
         self.pos_rect = self.board_canvas.create_rectangle(
             (self.col_pos*self.rect_size, self.row_pos*self.rect_size),
             ((self.col_pos+1)*self.rect_size, (self.row_pos+1)*self.rect_size),
@@ -86,7 +88,7 @@ class Board:
 
         root.bind('z', self._select)
 ##        root.bind('Z', self._select)
-        root.bind('x', self._select)
+        root.bind('x', self._cancel)
 ##        root.bind('X', self._select)
         
         
@@ -141,90 +143,127 @@ class Board:
             pass
 
     def _select(self, event):
-        if event.keysym == 'z':
-            if self.sel_Lb.config('state')[-1] == DISABLED:
-                if 
-                    self.board_canvas.itemconfig(self.sel_rect, state=NORMAL)
-                    self.board_canvas.coords(self.sel_rect, self.board_canvas.coords(self.pos_rect))
-                    self.board_canvas.lift(self.sel_rect)
-                    self.board_canvas.config(state=DISABLED)
-                    
-                    self.sel_Lb.config(state=NORMAL)
-                    self.sel_Lb.insert(END,'이동')
-                    self.sel_Lb.insert(END,'공격')
-                    self.sel_Lb.insert(END,'기술')
-                    self.sel_Lb.insert(END,'취소')
-                    self.sel_Lb.focus()
-                    self.sel_Lb.select_set(0)
-                    self.sel_Lb.activate(0)
-            else:
-                sel = self.sel_Lb.selection_get()
+        if self.sel_Lb.config('state')[-1] == DISABLED: # 판의 활성화 상태
+            if self.board_canvas.itemcget(self.sel_rect, 'state') == NORMAL: # 유닛 선택 상태
+                sel_coords = self.board_canvas.coords(self.sel_rect)
+                sel_x = int(sel_coords[0])//self.rect_size
+                sel_y = int(sel_coords[1])//self.rect_size
+                unit = self.canvas[sel_y][sel_x].get('unit')
                 
+                self._move(unit)
                 
-                
-                
-##                self.board_canvas.move(self.sel_rect,
-##                                       self.board_canvas.itemcget(self.sel_rect, x)
-##                                       - self.board_canvas.itemget(self.pos_rect, x),
-##                                       self.board_canvas.itemcget(self.sel_rect, y)
-##                                       - self.board_canvas.itemget(self.pos_rect, y),)
-            pass
-        elif event.keysym == 'x':
-            pass
+            elif self.canvas[self.row_pos][self.col_pos].get('unit'): # 유닛의 존재 상태
+                # 판 비활성화
+                self.board_canvas.itemconfig(self.sel_rect, state=NORMAL)
+                self.board_canvas.coords(self.sel_rect, self.board_canvas.coords(self.pos_rect))
+                self.board_canvas.lift(self.sel_rect)
+                self.board_canvas.config(state=DISABLED)
 
-    def set_unit(self, x, y, unit):
+                # 선택지 활성화
+                self.sel_Lb.config(state=NORMAL)
+                self.sel_Lb.insert(END,'이동', '공격', '기술')
+                self.sel_Lb.focus()
+                self.sel_Lb.select_set(0)
+                self.sel_Lb.activate(0)
+                
+        else:
+            sel = self.sel_Lb.selection_get()
+            if sel == '이동': self._move_range(self.canvas[self.row_pos][self.col_pos].get('unit'))
+            elif sel == '공격': self._attack_range(self.canvas[self.row_pos][self.col_pos].get('unit'))
+            elif sel == '기술': self._skill()
+                
+
+    def _cancel(self, event):
+        pass
+
+    def _move_range(self, unit):
+        self.move_rects = []
+        for m in range(-unit.stat['speed'], unit.stat['speed']+1):
+            for n in range(-(unit.stat['speed']-abs(m)), unit.stat['speed']-abs(m)+1):
+                if unit.x+m < 0 or unit.x+m > self.rows-1  or unit.y+n < 0 or unit.y+n > self.cols-1: pass
+                elif self.canvas[unit.y+n][unit.x+m].get('unit', None): pass
+                else:
+                    self.move_rects.append(self.board_canvas.create_rectangle(
+                    ((unit.x+m)*self.rect_size, (unit.y+n)*self.rect_size),
+                    ((unit.x+m+1)*self.rect_size, (unit.y+n+1)*self.rect_size),
+                    fill='skyblue'))
+
+        # 판 활성화
+        self.board_canvas.config(state=NORMAL)
+        self.board_canvas.lift(self.sel_rect)
+        self.board_canvas.lift(self.pos_rect)
+
+        # 선택지 비활성화
+        self.sel_Lb.delete(0, END)
+        self.sel_Lb.config(state=DISABLED)
+
+
+    def _move(self, unit):
+        sel_coords = self.board_canvas.coords(self.sel_rect)
+        sel_x = int(sel_coords[0])//self.rect_size
+        sel_y = int(sel_coords[1])//self.rect_size
+        dist = abs(self.row_pos - sel_y) + abs(self.col_pos - sel_x)
+        if 0 < dist <= unit.stat['speed'] and not self.canvas[self.row_pos][self.col_pos].get('unit', False):
+            self.canvas[self.row_pos][self.col_pos]['unit'] = self.canvas[unit.y][unit.x].pop('unit')
+
+            self.board_canvas.coords(unit.image_ID,
+                                     self.board_canvas.coords(self.pos_rect)[0] + self.rect_size//2,
+                                     self.board_canvas.coords(self.pos_rect)[1] + self.rect_size//2)
+            for R in self.move_rects:
+                self.board_canvas.delete(R)
+            del(self.move_rects)
+            self.board_canvas.itemconfig(self.sel_rect, state=HIDDEN)
+
+            unit.x = self.col_pos
+            unit.y = self.row_pos
+
+    def _attack_range(self, unit):
+        self.attack_rects = []
+        self.target_rects = []
+        for m in range(-unit.stat['range'], unit.stat['range']+1):
+            for n in range(-(unit.stat['range']-abs(m)), unit.stat['range']-abs(m)+1):
+                if unit.x+m < 0 or unit.x+m > self.rows-1  or unit.y+n < 0 or unit.y+n > self.cols-1: pass
+                elif not m and not n: pass
+                else:
+                    self.attack_rects.append(self.board_canvas.create_rectangle(
+                    ((unit.x+m)*self.rect_size, (unit.y+n)*self.rect_size),
+                    ((unit.x+m+1)*self.rect_size, (unit.y+n+1)*self.rect_size),
+                    fill='orange'))
+
+                    other_unit = self.canvas[unit.y+n][unit.x+m].get('unit', None)
+                    if other_unit:
+                        self.board_canvas.lift(other_unit.image_ID)
+                        self.target_rects.append(self.board_canvas.create_rectangle(
+                            (other_unit.x*self.rect_size, other_unit.y*self.rect_size),
+                            ((other_unit.x+1)*self.rect_size, (other_unit.y+1)*self.rect_size),
+                            outline='red', width=3))
+
+        # 판 활성화
+        self.board_canvas.config(state=NORMAL)
+        for T in self.target_rects:
+            self.board_canvas.lift(T)
+        self.board_canvas.lift(self.sel_rect)
+        self.board_canvas.lift(self.pos_rect)
+
+        # 선택지 비활성화
+        self.sel_Lb.delete(0, END)
+        self.sel_Lb.config(state=DISABLED)
+        
+    def _skill(self):
+        pass
+            
+    def set_unit(self, unit, x, y):
         unit.x = x
         unit.y = y
 
-        self.image = PhotoImage(file = unit.image)
-##        h = self.image.height()
-##        w = self.image.width()
-##        self.image = self.image.zoom(self.rect_size)
-##        self.image = self.image.subsample(w, h)
-        self.board_canvas.create_image(x*self.rect_size+self.image.width()//2,
-                                       y*self.rect_size+self.image.height()//2,
-                                       image=self.image)
+        unit.image = PhotoImage(file = unit.image)
+        
+        unit.image_ID = self.board_canvas.create_image(x*self.rect_size+unit.image.width()//2,
+                                       y*self.rect_size+unit.image.height()//2,
+                                       image=unit.image)
         self.board_canvas.lift(self.pos_rect)
 
-
-    def move(self, x, y):
-        temp = self.frame
-        unit = temp[x][y]
-
-        print(unit)
-        if type(unit) == Unit:
-            for m in range(-unit.stat['speed'], unit.stat['speed']+1):
-                for n in range(-(unit.stat['speed']-abs(m)), unit.stat['speed']-abs(m)+1):
-                    if (not n and not m) or (x+m < 0 or x+m > self.height or y+n < 0 or y+n > self.width): continue
-                    temp[x+m][y+n] = '■'
-
-            show = ''
-            for h in temp:
-                for w in h:
-                    show += str(w)
-                show += '\n'
-            print(show)
-
-
-            xto = int(input("x 이동량: "))
-            yto = int(input("y 이동량: "))
-            self.frame[x][y] = '□'
-            self.frame[x+xto][y+yto] = unit
-
-            for m in range(-unit.stat['speed'], unit.stat['speed']+1):
-                for n in range(-(unit.stat['speed']-abs(m)), unit.stat['speed']-abs(m)+1):
-                    if (not n and not m) or (x+m < 0 or x+m > self.height or y+n < 0 or y+n > self.width): continue
-                    temp[x+m][y+n] = '□'
-
-            show = ''
-            for h in temp:
-                for w in h:
-                    show += str(w)
-                show += '\n'
-            print(show)
-
-            unit.move(xto,yto)
-
+        self.canvas[y][x]['unit'] = unit
 
 ##a.set_unit(1,3,Unit(speed = 5))
 ##a.set_unit(40,30,Unit())
@@ -236,6 +275,7 @@ root = Tk()
 root.geometry('1200x1000+0+0')
 root.title('턴제 게임')
 
-a = Board(10,10)
-a.set_unit(0,1,핫산)
+a = Board(20,20)
+a.set_unit(핫산, 0, 1)
+a.set_unit(예거, 10,7)
 root.mainloop()

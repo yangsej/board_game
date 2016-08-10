@@ -27,10 +27,10 @@ class Unit:
     def __str__(self):
         return self.name
 
-    def move(self, x, y):
-        self.x += x
-        self.y += y
         
 
 핫산 = Unit('핫산',action=2, speed=5, attack=3, defence=1,
-          range=7, accuracy=70, image='C:/Users/ysj/Desktop/python/판/hot.png')
+          range=7, accuracy=70, image='hot.png')
+
+예거 = Unit('예거',action=3, speed=8, attack=4, defence=2,
+          range=10, accuracy=80, image='예거형.png')
